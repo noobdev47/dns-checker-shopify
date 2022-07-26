@@ -3,49 +3,10 @@ import { Link } from 'react-router-dom'
 import { useCallback, useState } from 'react'
 import { Button, TextStyle, IndexTable } from '@shopify/polaris'
 
-const Table = ({ dnsCheckers }) => {
+const Table = ({ dnsCheckers, loading }) => {
 	const [active, setActive] = useState(false)
 
 	const toggleActive = useCallback(() => setActive(active => !active), [])
-
-	const customers = [
-		{
-			id: '1',
-			email: 'sumair@knowpakistan.net',
-			spamScore: '1',
-			thingsToFix: '5',
-			score: 20,
-			created: 'Jun 7, 2022',
-			status: 'Completed',
-		},
-		{
-			id: '2',
-			email: 'muhammadsajid@knowpakistan.net',
-			spamScore: '0.5',
-			thingsToFix: '6',
-			score: 30,
-			created: 'Jul 7, 2021',
-			status: 'Processing',
-		},
-		{
-			id: '3',
-			email: 'muhammadsajid@knowpakistan.net',
-			spamScore: '0.5',
-			thingsToFix: '6',
-			score: 30,
-			created: 'Jul 7, 2021',
-			status: 'Processing',
-		},
-		{
-			id: '4',
-			email: 'muhammadsajid@knowpakistan.net',
-			spamScore: '0.5',
-			thingsToFix: '6',
-			score: 30,
-			created: 'Jul 7, 2021',
-			status: 'Processing',
-		},
-	]
 
 	const resourceName = {
 		plural: 'DNS Checkers',
@@ -94,6 +55,7 @@ const Table = ({ dnsCheckers }) => {
 
 	return (
 		<IndexTable
+			loading={loading}
 			selectable={false}
 			resourceName={resourceName}
 			itemCount={dnsCheckers.length}
