@@ -1,9 +1,9 @@
-import axios from 'axios'
 import { v4 as uuidv4 } from 'uuid'
 import Table from '../components/table/Table'
 import { useNavigate } from 'react-router-dom'
 import Filter from '../components/filter/Filter'
 import { useState, useCallback, useEffect } from 'react'
+import DNSCheckerService from '../api_services/dnsCheckerService'
 import AddDNSCheckerModal from '../components/modal/AddDNSCheckerModal'
 import { Page, Card, Button, Layout, Pagination } from '@shopify/polaris'
 
@@ -12,45 +12,48 @@ const HomePage = () => {
 	const [open, setOpen] = useState(false)
 	const [copy, setCopy] = useState(false)
 	const [active, setActive] = useState(false)
+	const [loading, setLoading] = useState(false)
 	const [activePage, setActivePage] = useState(1)
 	const [dnsCheckers, setDnsCheckers] = useState([])
 	const [recipientEmail, setRecipientEmail] = useState(
 		uuidv4() + '@inboxbetter.com'
 	)
-	const [metaData, setMetaData] = useState({ per_page: 0, total: 0 })
+	const [permissionGranted, setPermissionGranted] = useState(false)
+	const [metaData, setMetaData] = useState({
+		total: 0,
+		per_page: 0,
+		last_page: 2,
+	})
 
 	let navigate = useNavigate()
 
 	const handleToggle = useCallback(() => setOpen(open => !open), [])
 	const handleModalChange = useCallback(() => setActive(!active), [active])
 
-	const handleSubmit = () => {
-		axios
-			.post(
-				'https://inboxbetter.comocrm.com/api/domain-health/test-your-email',
-				{
-					email: recipientEmail,
-				}
-			)
-			.then(res => {
-				console.log(res)
-				handleModalChange()
-				axios
-					.get('https://inboxbetter.comocrm.com/api/domain-healths')
-					.then(res => {
-						setDnsCheckers(res.data.data)
-						setMetaData({
-							...metaData,
-							total: res.data.total,
-							per_page: res.data.per_page,
-						})
-					})
-			})
+	const handleFilter = async () => {
+		setLoading(true)
+		try {
+			const response = await DNSCheckerService.getDomainHealths(email)
+
+			if (response.data.length !== 0) {
+				setDnsCheckers(response.data)
+				setMetaData({
+					...metaData,
+					total: response.total,
+					per_page: response.per_page,
+					last_page: response.last_page,
+				})
+				setActivePage(1)
+			}
+			setLoading(false)
+		} catch (error) {
+			setLoading(false)
+		}
 	}
 
 	const handleClear = () => {
 		setEmail('')
-		//apicall here
+		fetchData()
 	}
 
 	const copyToClipboard = () => {
@@ -61,60 +64,113 @@ const HomePage = () => {
 		setCopy(true)
 	}
 
-	const handleNextPage = () => {
-		axios
-			.get(
-				`https://inboxbetter.comocrm.com/api/domain-healths?page=${
-					activePage + 1
-				}`
+	const handleNextPage = async () => {
+		setLoading(true)
+		try {
+			const response = await DNSCheckerService.getDomainHealths(
+				email,
+				activePage + 1
 			)
-			.then(res => {
-				setDnsCheckers(res.data.data)
+
+			if (response.data.length !== 0) {
+				setDnsCheckers(response.data)
 				setMetaData({
 					...metaData,
-					total: res.data.total,
-					per_page: res.data.per_page,
+					total: response.total,
+					per_page: response.per_page,
+					last_page: response.last_page,
 				})
 				setActivePage(activePage + 1)
-			})
+			}
+			setLoading(false)
+		} catch (error) {
+			setLoading(false)
+		}
 	}
 
-	const handlePreviousPage = () => {
-		axios
-			.get(
-				`https://inboxbetter.comocrm.com/api/domain-healths?page=${
-					activePage - 1
-				}`
+	const handlePreviousPage = async () => {
+		setLoading(true)
+
+		try {
+			const response = await DNSCheckerService.getDomainHealths(
+				email,
+				activePage - 1
 			)
-			.then(res => {
-				setDnsCheckers(res.data.data)
+
+			if (response.data.length !== 0) {
+				setDnsCheckers(response.data)
 				setMetaData({
 					...metaData,
-					total: res.data.total,
-					per_page: res.data.per_page,
+					total: response.total,
+					per_page: response.per_page,
+					last_page: response.last_page,
 				})
 				setActivePage(activePage - 1)
+			}
+			setLoading(false)
+		} catch (error) {
+			setLoading(false)
+		}
+	}
+
+	const handleAddNewTest = async () => {
+		setLoading(true)
+
+		try {
+			const response = await DNSCheckerService.postRunNewTest({
+				to_email: recipientEmail,
 			})
+
+			if (response.data.length !== 0) {
+				setDnsCheckers(response.data)
+				setMetaData({
+					...metaData,
+					total: response.total,
+					per_page: response.per_page,
+					last_page: response.last_page,
+				})
+				handleModalChange()
+				fetchData()
+			}
+			setLoading(false)
+		} catch (error) {
+			setLoading(false)
+		}
+	}
+
+	const fetchData = async () => {
+		setLoading(true)
+
+		try {
+			const response = await DNSCheckerService.getDomainHealths(email)
+
+			if (response.data.length !== 0) {
+				setDnsCheckers(response.data)
+				setMetaData({
+					...metaData,
+					total: response.total,
+					per_page: response.per_page,
+					last_page: response.last_page,
+				})
+			}
+			setLoading(false)
+		} catch (error) {
+			setLoading(false)
+		}
+	}
+
+	const getPermissions = async () => {
+		const permissionStatus = await navigator.permissions.query({
+			name: 'clipboard-read',
+			allowWithoutGesture: false,
+		})
+
+		console.log(permissionStatus.state)
 	}
 
 	useEffect(() => {
-		if (
-			localStorage.getItem('token') !== undefined &&
-			localStorage.getItem('token') !== null
-		) {
-			axios
-				.get('https://inboxbetter.comocrm.com/api/domain-healths')
-				.then(res => {
-					setDnsCheckers(res.data.data)
-					setMetaData({
-						...metaData,
-						total: res.data.total,
-						per_page: res.data.per_page,
-					})
-				})
-		} else {
-			navigate('/auth/login')
-		}
+		getPermissions()
+		fetchData()
 	}, [])
 
 	return (
@@ -140,9 +196,9 @@ const HomePage = () => {
 							email={email}
 							setEmail={setEmail}
 							handleClear={handleClear}
-							// handleSubmit={handleSubmit}
+							handleFilter={handleFilter}
 						/>
-						<Table dnsCheckers={dnsCheckers} />
+						<Table loading={loading} dnsCheckers={dnsCheckers} />
 						<div
 							style={{
 								display: 'flex',
@@ -155,7 +211,7 @@ const HomePage = () => {
 								onNext={handleNextPage}
 								hasPrevious={activePage > 1}
 								onPrevious={handlePreviousPage}
-								hasNext={activePage < metaData.total}
+								hasNext={activePage < metaData.last_page}
 							/>
 						</div>
 					</Card>
@@ -164,9 +220,9 @@ const HomePage = () => {
 			<AddDNSCheckerModal
 				copy={copy}
 				active={active}
-				handleSubmit={handleSubmit}
 				recipientEmail={recipientEmail}
 				copyToClipboard={copyToClipboard}
+				handleAddNewTest={handleAddNewTest}
 				handleModalChange={handleModalChange}
 			/>
 		</Page>
