@@ -2,7 +2,6 @@ import API from "./api"
 
 const DNSCheckerService = {
   getDomainHealths: (searchInput, pageNumber = 1) => {
-    console.log("API ......", API)
     return API.get(`/domain-healths?email=${searchInput}&page=${pageNumber}`)
       .then(({ data }) => {
         return data;
